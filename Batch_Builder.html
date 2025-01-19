@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Ticket Rebatcher</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f4f4f4;
+        }
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            width: 100%;
+            max-width: 400px;
+        }
+        textarea {
+            width: 100%;
+            max-width: 600px;
+            margin: 10px 0;
+        }
+        h2, h3 {
+            margin: 10px 0;
+        }
+        .toggle-btn {
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .toggle-btn.active {
+            background-color: #28a745;
+        }
+        .warning {
+            color: red;
+            margin-top: 10px;
+        }
+        .mode-label {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Quick Ticket Rebatcher</h2>
+        <textarea id="ticketList" placeholder="Paste your list of tickets here, one per line..." rows="10"></textarea>
+        <input type="number" id="batchSize" placeholder="Enter batch size" />
+        
+        <button id="toggleBatchType" class="toggle-btn" onclick="toggleBatchType()">Switch to Letters Mode</button>
+        
+        <div class="mode-label" id="batchModeLabel">Batch Mode: Numbers</div>
+        
+        <button id="rebatchBtn" onclick="rebatchTickets()">Rebatch Tickets</button>
+        
+        <h3>Batch Output:</h3>
+        <textarea id="batchOutput" readonly rows="10"></textarea>
+        
+        <button onclick="copyToClipboard()">Copy to Clipboard</button>
+        <button onclick="resetFields()">Reset</button>
+        
+        <div id="warningMessage" class="warning" style="display: none;">
+            Warning: Batching with letters is only available for up to 26 batches. The numbering has been switched to numbers.
+        </div>
+    </div>
+
+    <script>
+        let useLetters = false; // Track the current batch type
+        let ticketList = []; // Will hold ticket data
+        let batchSize = 0; // Will hold the current batch size
+
+        // Toggle between using letters or numbers for batch labels
+        function toggleBatchType() {
+            useLetters = !useLetters;
+            const modeLabel = document.getElementById('batchModeLabel');
+            const toggleButton = document.getElementById('toggleBatchType');
+
+            if (useLetters) {
+                modeLabel.textContent = 'Batch Mode: Letters';
+                toggleButton.textContent = 'Switch to Numbers Mode';
+            } else {
+                modeLabel.textContent = 'Batch Mode: Numbers';
+                toggleButton.textContent = 'Switch to Letters Mode';
+            }
+        }
+
+        // Rebatch the tickets into the specified batch sizes
+        function rebatchTickets() {
+            const batchInput = document.getElementById('batchSize').value.trim();
+            ticketList = document.getElementById('ticketList').value.trim().split('\n');
+
+            if (ticketList.length === 0 || isNaN(batchInput) || batchInput <= 0) {
+                alert('Please provide a valid list of tickets and batch size.');
+                return;
+            }
+
+            batchSize = parseInt(batchInput);
+
+            let batches = [];
+            for (let i = 0; i < ticketList.length; i += batchSize) {
+                batches.push(ticketList.slice(i, i + batchSize));
+            }
+
+            if (useLetters && batches.length > 26) {
+                // Switch to numbers if more than 26 batches
+                useLetters = false;
+                document.getElementById('warningMessage').style.display = 'block';
+                const modeLabel = document.getElementById('batchModeLabel');
+                modeLabel.textContent = 'Batch Mode: Numbers';
+                const toggleButton = document.getElementById('toggleBatchType');
+                toggleButton.textContent = 'Switch to Letters Mode'; // Reset toggle button text
+            } else {
+                document.getElementById('warningMessage').style.display = 'none';
+            }
+
+            // Create the output in a vertical format with numbered or lettered batches
+            let output = '';
+            batches.forEach((batch, index) => {
+                let batchLabel;
+                if (useLetters) {
+                    if (index < 26) {
+                        batchLabel = String.fromCharCode(65 + index); // A-Z
+                    } else {
+                        return; // No more batches beyond 'Z'
+                    }
+                } else {
+                    batchLabel = index + 1; // Use numbers
+                }
+
+                output += `${batchLabel}\n`; // Just the batch number (either a letter or a number)
+                batch.forEach(ticket => {
+                    output += `${ticket}\n`;
+                });
+            });
+
+            // Set the formatted output in the textarea
+            document.getElementById('batchOutput').textContent = output.trim();
+        }
+
+        // Copy the batch output to the clipboard
+        function copyToClipboard() {
+            const outputText = document.getElementById('batchOutput').value;
+            navigator.clipboard.writeText(outputText)
+                .then(() => {
+                    alert("Batch output copied to clipboard!");
+                })
+                .catch(err => {
+                    alert("Failed to copy text: " + err);
+                });
+        }
+
+        // Reset all fields and settings by refreshing the page
+        function resetFields() {
+            location.reload(); // Refresh the page to reset all fields and settings
+        }
+    </script>
+
+</body>
+</html>

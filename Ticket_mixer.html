@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAT Ticket Mixer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      text-align: center;
+    }
+    .inputs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    textarea {
+      height: 100px;
+      width: 250px;
+      resize: none;
+      overflow: auto;
+      white-space: nowrap;
+    }
+    button {
+      display: block;
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 20px auto;
+    }
+    .output {
+      background-color: #f9f9f9;
+      padding: 10px;
+      border: 1px solid #ddd;
+      max-height: 200px;
+      overflow-y: auto;
+      overflow-x: auto;
+      white-space: nowrap;
+      display: inline-block;
+      margin-top: 20px;
+      text-align: left;
+      min-width: 250px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>CAT Ticket Mixer</h1>
+
+  <div class="inputs">
+    <textarea id="input1" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea>
+    <textarea id="input2" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea>
+    <textarea id="input3" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea>
+    <textarea id="input4" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea> <!-- New input added -->
+  </div>
+
+  <div>
+    <button id="processButton">Shuffle Tickets</button>
+    <button id="resetButton">Reset</button>
+  </div>
+
+  <h2 id="outputHeading" style="display:none;">Shuffled Tickets</h2>
+
+  <div class="output" id="output"></div>
+
+  <button id="copyButton" style="display:none;">Copy to Clipboard</button>
+
+  <script>
+    function adjustWidth(element) {
+      const lines = element.value.split('\n');
+      const maxWidth = lines.reduce((max, line) => Math.max(max, line.length), 0);
+      element.style.width = `${Math.max(maxWidth * 8, 250)}px`; // Minimum width of 250px
+    }
+
+    function isAtLeastTwoInputsPopulated() {
+      const input1 = document.getElementById('input1').value.trim();
+      const input2 = document.getElementById('input2').value.trim();
+      const input3 = document.getElementById('input3').value.trim();
+      const input4 = document.getElementById('input4').value.trim(); // Check for the new input
+
+      // Count how many inputs are populated
+      const populatedInputs = [input1, input2, input3, input4].filter(input => input !== '').length;
+      return populatedInputs >= 2;
+    }
+
+    document.getElementById('processButton').addEventListener('click', () => {
+      if (!isAtLeastTwoInputsPopulated()) {
+        alert('Please populate at least two input fields before processing the tickets.');
+        return; // Prevent further processing if less than two inputs are populated
+      }
+
+      // Get the input values
+      const input1 = document.getElementById('input1').value.trim();
+      const input2 = document.getElementById('input2').value.trim();
+      const input3 = document.getElementById('input3').value.trim();
+      const input4 = document.getElementById('input4').value.trim(); // Get the new input
+
+      // Combine all inputs into one array of tickets
+      const allTickets = [...input1.split('\n'), ...input2.split('\n'), ...input3.split('\n'), ...input4.split('\n')]
+        .filter(ticket => ticket !== ''); // Remove empty lines
+
+      // Shuffle the tickets
+      for (let i = allTickets.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allTickets[i], allTickets[j]] = [allTickets[j], allTickets[i]];
+      }
+
+      // Display the shuffled tickets
+      const outputDiv = document.getElementById('output');
+      const outputHeading = document.getElementById('outputHeading');
+      const copyButton = document.getElementById('copyButton');
+
+      // Show the heading and the copy button
+      outputHeading.style.display = 'block';
+      copyButton.style.display = 'block';
+
+      // Determine the maximum length of the tickets for output box width
+      const maxTicketLength = Math.max(...allTickets.map(ticket => ticket.length));
+
+      // Set the output width based on the longest ticket
+      outputDiv.style.width = `${maxTicketLength * 8}px`;  // 8px per character
+
+      // Display the shuffled tickets in the output box
+      outputDiv.innerHTML = allTickets.join('<br>');
+
+      // Store the shuffled tickets in a global variable for later use
+      window.shuffledTickets = allTickets.join('\n');
+    });
+
+    // Copy to clipboard functionality
+    document.getElementById('copyButton').addEventListener('click', () => {
+      if (window.shuffledTickets) {
+        navigator.clipboard.writeText(window.shuffledTickets).catch(err => {
+          console.error('Error copying to clipboard: ', err);
+        });
+      }
+    });
+
+    // Reset functionality
+    document.getElementById('resetButton').addEventListener('click', () => {
+      // Reset the input fields
+      document.getElementById('input1').value = '';
+      document.getElementById('input2').value = '';
+      document.getElementById('input3').value = '';
+      document.getElementById('input4').value = ''; // Reset the new input
+
+      // Reset the output box and hide it
+      document.getElementById('output').innerHTML = '';
+      document.getElementById('outputHeading').style.display = 'none';
+
+      // Hide the copy button
+      document.getElementById('copyButton').style.display = 'none';
+
+      // Clear the global variable
+      window.shuffledTickets = '';
+    });
+  </script>
+</body>
+</html>
