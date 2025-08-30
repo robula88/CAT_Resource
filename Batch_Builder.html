@@ -1,179 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quick Ticket Rebatcher</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #f4f4f4;
-        }
-        .container {
-            text-align: center;
-            width: 100%;
-            max-width: 600px;
-            padding: 20px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        input, button {
-            padding: 10px;
-            margin: 5px;
-            width: 100%;
-            max-width: 400px;
-        }
-        textarea {
-            width: 100%;
-            max-width: 600px;
-            margin: 10px 0;
-        }
-        h2, h3 {
-            margin: 10px 0;
-        }
-        .toggle-btn {
-            padding: 10px;
-            margin: 5px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        .toggle-btn.active {
-            background-color: #28a745;
-        }
-        .warning {
-            color: red;
-            margin-top: 10px;
-        }
-        .mode-label {
-            margin-top: 10px;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick Ticket Rebatcher</title>
+  <style>
+    :root { --bg:#f4f4f4; --card:#fff; --text:#222; --muted:#666; --brand:#007bff; --ok:#28a745; --warn:#b00020; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg); color: var(--text); display: grid; place-items: center; padding: 16px;
+    }
+    .container {
+      width: 100%; max-width: 760px; background: var(--card); border-radius: 12px; padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    .row { display: grid; gap: 10px; }
+    .controls { display: grid; gap: 10px; grid-template-columns: 1fr 140px; }
+    label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+    textarea, input[type="number"], button { width: 100%; border-radius: 8px; border: 1px solid #ddd; padding: 10px; font-size: 14px; }
+    textarea { resize: vertical; min-height: 160px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    button { cursor: pointer; border: none; background: var(--brand); color: #fff; transition: filter .15s ease; }
+    button:hover { filter: brightness(.95); }
+    .btn-secondary { background: #444; }
+    .btn-ghost { background: #eee; color: #111; border: 1px solid #ddd; }
+    .toggle.active { background: var(--ok); }
+    .stack { display: flex; flex-wrap: wrap; gap: 8px; }
+    .warning { color: var(--warn); font-size: 13px; margin-top: 6px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .inline { display: flex; align-items: center; gap: 6px; }
+    .status { min-height: 1em; font-size: 12px; margin-top: 6px; opacity: 0; transition: opacity .2s ease; }
+    .status.show { opacity: 1; }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--warn); }
+    @media (max-width: 640px) { .controls { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
+  <main class="container" role="main">
+    <h1>Quick Ticket Rebatcher</h1>
 
-    <div class="container">
-        <h2>Quick Ticket Rebatcher</h2>
-        <textarea id="ticketList" placeholder="Paste your list of tickets here, one per line..." rows="10"></textarea>
-        <input type="number" id="batchSize" placeholder="Enter batch size" />
-        
-        <button id="toggleBatchType" class="toggle-btn" onclick="toggleBatchType()">Switch to Letters Mode</button>
-        
-        <div class="mode-label" id="batchModeLabel">Batch Mode: Numbers</div>
-        
-        <button id="rebatchBtn" onclick="rebatchTickets()">Rebatch Tickets</button>
-        
-        <h3>Batch Output:</h3>
-        <textarea id="batchOutput" readonly rows="10"></textarea>
-        
-        <button onclick="copyToClipboard()">Copy to Clipboard</button>
-        <button onclick="resetFields()">Reset</button>
-        
-        <div id="warningMessage" class="warning" style="display: none;">
-            Warning: Batching with letters is only available for up to 26 batches. The numbering has been switched to numbers.
+    <section class="row" aria-label="Ticket input">
+      <div>
+        <label for="ticketList">Paste your list of tickets (one per line)</label>
+        <textarea id="ticketList" placeholder="Paste here"></textarea>
+        <div class="inline">
+          <input type="checkbox" id="dedupeToggle" />
+          <label for="dedupeToggle">Remove duplicate tickets</label>
         </div>
-    </div>
+        <div class="muted">Blank lines are ignored.</div>
+      </div>
+      <div class="controls">
+        <div>
+          <label for="batchSize">Batch size</label>
+          <input id="batchSize" type="number" inputmode="numeric" min="1" value="5" placeholder="e.g. 10" />
+        </div>
+        <div>
+          <label for="labelMode">Label mode</label>
+          <button id="toggleBatchType" class="toggle" type="button" aria-pressed="false">Numbers</button>
+        </div>
+      </div>
+      <div class="stack">
+        <button id="rebatchBtn" type="button">Rebatch Tickets</button>
+        <button id="copyBtn" type="button" class="btn-secondary" disabled>Copy Output</button>
+        <button id="resetBtn" type="button" class="btn-ghost">Reset</button>
+      </div>
+      <div id="copyStatus" class="status" role="status" aria-live="polite"></div>
+      <div id="warningMessage" class="warning" role="alert" style="display:none"></div>
+    </section>
 
-    <script>
-        let useLetters = false; // Track the current batch type
-        let ticketList = []; // Will hold ticket data
-        let batchSize = 0; // Will hold the current batch size
+    <section class="row" aria-label="Batch output">
+      <div>
+        <label for="batchOutput">Batch Output</label>
+        <textarea id="batchOutput" readonly placeholder="Batches will appear here..."></textarea>
+      </div>
+    </section>
+  </main>
 
-        // Toggle between using letters or numbers for batch labels
-        function toggleBatchType() {
-            useLetters = !useLetters;
-            const modeLabel = document.getElementById('batchModeLabel');
-            const toggleButton = document.getElementById('toggleBatchType');
+  <script>
+    // --- State ---
+    let useLetters = false; // numbers by default
 
-            if (useLetters) {
-                modeLabel.textContent = 'Batch Mode: Letters';
-                toggleButton.textContent = 'Switch to Numbers Mode';
-            } else {
-                modeLabel.textContent = 'Batch Mode: Numbers';
-                toggleButton.textContent = 'Switch to Letters Mode';
-            }
+    // --- Elements ---
+    const els = {
+      ticketList: document.getElementById('ticketList'),
+      batchSize: document.getElementById('batchSize'),
+      toggle: document.getElementById('toggleBatchType'),
+      warning: document.getElementById('warningMessage'),
+      output: document.getElementById('batchOutput'),
+      dedupe: document.getElementById('dedupeToggle'),
+      rebatch: document.getElementById('rebatchBtn'),
+      copy: document.getElementById('copyBtn'),
+      reset: document.getElementById('resetBtn'),
+      copyStatus: document.getElementById('copyStatus')
+    };
+
+    // --- Utilities ---
+    function notify(message, ok = true) {
+      els.copyStatus.textContent = message;
+      els.copyStatus.classList.remove('ok','err','show');
+      els.copyStatus.classList.add(ok ? 'ok' : 'err');
+      void els.copyStatus.offsetWidth;
+      els.copyStatus.classList.add('show');
+      clearTimeout(notify._t);
+      notify._t = setTimeout(() => { els.copyStatus.classList.remove('show'); }, 1600);
+    }
+
+    const clampInt = (n) => Math.max(1, Number.isFinite(n) ? Math.floor(n) : 1);
+
+    function parseTickets(raw) {
+      let list = raw
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n')
+        .split('\n')
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (els.dedupe.checked) list = [...new Set(list)];
+      return list;
+    }
+
+    // Convert 0-based index to Excel-like letters: 0->A, 25->Z, 26->AA, 27->AB, ...
+    function indexToLetters(idx) {
+      let n = idx + 1; // 1-based for the algorithm
+      let s = '';
+      while (n > 0) {
+        const rem = (n - 1) % 26;
+        s = String.fromCharCode(65 + rem) + s;
+        n = Math.floor((n - 1) / 26);
+      }
+      return s;
+    }
+
+    function buildBatches(list, size) {
+      const batches = [];
+      for (let i = 0; i < list.length; i += size) {
+        batches.push(list.slice(i, i + size));
+      }
+      return batches;
+    }
+
+    function renderOutput(batches) {
+      const lines = [];
+      batches.forEach((batch, i) => {
+        const label = useLetters ? indexToLetters(i) : (i + 1).toString();
+        lines.push(label);
+        for (const t of batch) lines.push(t);
+      });
+      const text = lines.join('\n');
+      els.output.value = text;
+      els.copy.disabled = !text;
+      return text;
+    }
+
+    function setModeUI() {
+      els.toggle.textContent = useLetters ? 'Letters' : 'Numbers';
+      els.toggle.setAttribute('aria-pressed', String(useLetters));
+      els.toggle.classList.toggle('active', useLetters);
+    }
+
+    function validate(batchSize, tickets) {
+      if (!tickets.length) return 'Please paste at least one ticket.';
+      if (!Number.isFinite(batchSize) || batchSize < 1) return 'Please enter a valid batch size (1 or more).';
+      return '';
+    }
+
+    // --- Handlers ---
+    els.toggle.addEventListener('click', () => {
+      useLetters = !useLetters;
+      setModeUI();
+    });
+
+    els.rebatch.addEventListener('click', () => {
+      const tickets = parseTickets(els.ticketList.value);
+      const size = clampInt(parseFloat(els.batchSize.value));
+
+      const err = validate(size, tickets);
+      if (err) { els.warning.textContent = err; els.warning.style.display = 'block'; return; }
+
+      els.warning.style.display = 'none';
+      const batches = buildBatches(tickets, size);
+      renderOutput(batches);
+    });
+
+    els.copy.addEventListener('click', async () => {
+      if (!els.output.value.trim()) {
+        notify('Nothing to copy.', false);
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(els.output.value);
+        notify('Copied to clipboard.', true);
+      } catch (e) {
+        try {
+          els.output.focus();
+          els.output.select();
+          const ok = document.execCommand && document.execCommand('copy');
+          notify(ok ? 'Copied to clipboard.' : 'Copy failed.', !!ok);
+        } catch {
+          notify('Copy failed.', false);
         }
+      }
+    });
 
-        // Rebatch the tickets into the specified batch sizes
-        function rebatchTickets() {
-            const batchInput = document.getElementById('batchSize').value.trim();
-            ticketList = document.getElementById('ticketList').value.trim().split('\n');
+    els.reset.addEventListener('click', () => {
+      els.ticketList.value = '';
+      els.batchSize.value = '5';
+      els.output.value = '';
+      els.dedupe.checked = false;
+      useLetters = false;
+      setModeUI();
+      els.warning.style.display = 'none';
+      els.copyStatus.textContent = '';
+      els.copyStatus.classList.remove('show','ok','err');
+      els.copy.disabled = true;
+    });
 
-            if (ticketList.length === 0 || isNaN(batchInput) || batchInput <= 0) {
-                alert('Please provide a valid list of tickets and batch size.');
-                return;
-            }
-
-            batchSize = parseInt(batchInput);
-
-            let batches = [];
-            for (let i = 0; i < ticketList.length; i += batchSize) {
-                batches.push(ticketList.slice(i, i + batchSize));
-            }
-
-            if (useLetters && batches.length > 26) {
-                // Switch to numbers if more than 26 batches
-                useLetters = false;
-                document.getElementById('warningMessage').style.display = 'block';
-                const modeLabel = document.getElementById('batchModeLabel');
-                modeLabel.textContent = 'Batch Mode: Numbers';
-                const toggleButton = document.getElementById('toggleBatchType');
-                toggleButton.textContent = 'Switch to Letters Mode'; // Reset toggle button text
-            } else {
-                document.getElementById('warningMessage').style.display = 'none';
-            }
-
-            // Create the output in a vertical format with numbered or lettered batches
-            let output = '';
-            batches.forEach((batch, index) => {
-                let batchLabel;
-                if (useLetters) {
-                    if (index < 26) {
-                        batchLabel = String.fromCharCode(65 + index); // A-Z
-                    } else {
-                        return; // No more batches beyond 'Z'
-                    }
-                } else {
-                    batchLabel = index + 1; // Use numbers
-                }
-
-                output += `${batchLabel}\n`; // Just the batch number (either a letter or a number)
-                batch.forEach(ticket => {
-                    output += `${ticket}\n`;
-                });
-            });
-
-            // Set the formatted output in the textarea
-            document.getElementById('batchOutput').textContent = output.trim();
-        }
-
-        // Copy the batch output to the clipboard
-        function copyToClipboard() {
-            const outputText = document.getElementById('batchOutput').value;
-            navigator.clipboard.writeText(outputText)
-                .then(() => {
-                    alert("Batch output copied to clipboard!");
-                })
-                .catch(err => {
-                    alert("Failed to copy text: " + err);
-                });
-        }
-
-        // Reset all fields and settings by refreshing the page
-        function resetFields() {
-            location.reload(); // Refresh the page to reset all fields and settings
-        }
-    </script>
-
+    // Init
+    setModeUI();
+    els.batchSize.value = '5';
+    els.copy.disabled = true;
+  </script>
 </body>
 </html>
