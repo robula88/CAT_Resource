@@ -36,12 +36,20 @@
       max-height: 200px;
       overflow-y: auto;
       overflow-x: auto;
-      white-space: nowrap;
+      white-space: pre;      /* preserve spacing */
+      font-family: monospace; /* consistent width */
       display: inline-block;
       margin-top: 20px;
       text-align: left;
       min-width: 250px;
       margin-bottom: 20px;
+    }
+    #copyMsg {
+      display: none;
+      font-size: 12px;
+      color: green;
+      margin-top: -15px;
+      margin-bottom: 15px;
     }
   </style>
 </head>
@@ -52,7 +60,7 @@
     <textarea id="input1" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea>
     <textarea id="input2" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea>
     <textarea id="input3" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea>
-    <textarea id="input4" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea> <!-- New input added -->
+    <textarea id="input4" placeholder="Paste tickets here..." oninput="adjustWidth(this)"></textarea>
   </div>
 
   <div>
@@ -65,94 +73,80 @@
   <div class="output" id="output"></div>
 
   <button id="copyButton" style="display:none;">Copy to Clipboard</button>
+  <div id="copyMsg">Copied!</div>
 
   <script>
+    const inputs = [
+      document.getElementById('input1'),
+      document.getElementById('input2'),
+      document.getElementById('input3'),
+      document.getElementById('input4')
+    ];
+    const outputDiv = document.getElementById('output');
+    const outputHeading = document.getElementById('outputHeading');
+    const copyButton = document.getElementById('copyButton');
+    const copyMsg = document.getElementById('copyMsg');
+
     function adjustWidth(element) {
       const lines = element.value.split('\n');
       const maxWidth = lines.reduce((max, line) => Math.max(max, line.length), 0);
-      element.style.width = `${Math.max(maxWidth * 8, 250)}px`; // Minimum width of 250px
+      element.style.width = `${Math.max(maxWidth * 8, 250)}px`;
     }
 
     function isAtLeastTwoInputsPopulated() {
-      const input1 = document.getElementById('input1').value.trim();
-      const input2 = document.getElementById('input2').value.trim();
-      const input3 = document.getElementById('input3').value.trim();
-      const input4 = document.getElementById('input4').value.trim(); // Check for the new input
-
-      // Count how many inputs are populated
-      const populatedInputs = [input1, input2, input3, input4].filter(input => input !== '').length;
-      return populatedInputs >= 2;
+      return inputs.filter(input => input.value.trim() !== '').length >= 2;
     }
 
     document.getElementById('processButton').addEventListener('click', () => {
       if (!isAtLeastTwoInputsPopulated()) {
         alert('Please populate at least two input fields before processing the tickets.');
-        return; // Prevent further processing if less than two inputs are populated
+        return;
       }
 
-      // Get the input values
-      const input1 = document.getElementById('input1').value.trim();
-      const input2 = document.getElementById('input2').value.trim();
-      const input3 = document.getElementById('input3').value.trim();
-      const input4 = document.getElementById('input4').value.trim(); // Get the new input
+      // Split inputs into batches
+      const batches = inputs.map(input =>
+        input.value.trim().split('\n').filter(t => t !== '')
+      );
+      const activeBatches = batches.filter(batch => batch.length > 0);
 
-      // Combine all inputs into one array of tickets
-      const allTickets = [...input1.split('\n'), ...input2.split('\n'), ...input3.split('\n'), ...input4.split('\n')]
-        .filter(ticket => ticket !== ''); // Remove empty lines
+      const result = [];
+      let stillTickets = true;
 
-      // Shuffle the tickets
-      for (let i = allTickets.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [allTickets[i], allTickets[j]] = [allTickets[j], allTickets[i]];
+      // Round-robin mix
+      while (stillTickets) {
+        stillTickets = false;
+        activeBatches.forEach(batch => {
+          if (batch.length > 0) {
+            stillTickets = true;
+            const i = Math.floor(Math.random() * batch.length);
+            result.push(batch.splice(i, 1)[0]);
+          }
+        });
       }
 
-      // Display the shuffled tickets
-      const outputDiv = document.getElementById('output');
-      const outputHeading = document.getElementById('outputHeading');
-      const copyButton = document.getElementById('copyButton');
-
-      // Show the heading and the copy button
       outputHeading.style.display = 'block';
       copyButton.style.display = 'block';
-
-      // Determine the maximum length of the tickets for output box width
-      const maxTicketLength = Math.max(...allTickets.map(ticket => ticket.length));
-
-      // Set the output width based on the longest ticket
-      outputDiv.style.width = `${maxTicketLength * 8}px`;  // 8px per character
-
-      // Display the shuffled tickets in the output box
-      outputDiv.innerHTML = allTickets.join('<br>');
-
-      // Store the shuffled tickets in a global variable for later use
-      window.shuffledTickets = allTickets.join('\n');
+      outputDiv.innerHTML = result.join('<br>');
+      window.shuffledTickets = result.join('\n');
     });
 
-    // Copy to clipboard functionality
-    document.getElementById('copyButton').addEventListener('click', () => {
+    // Copy to clipboard with subtle feedback
+    copyButton.addEventListener('click', () => {
       if (window.shuffledTickets) {
-        navigator.clipboard.writeText(window.shuffledTickets).catch(err => {
-          console.error('Error copying to clipboard: ', err);
+        navigator.clipboard.writeText(window.shuffledTickets).then(() => {
+          copyMsg.style.display = 'block';
+          setTimeout(() => copyMsg.style.display = 'none', 2000);
         });
       }
     });
 
-    // Reset functionality
+    // Reset all
     document.getElementById('resetButton').addEventListener('click', () => {
-      // Reset the input fields
-      document.getElementById('input1').value = '';
-      document.getElementById('input2').value = '';
-      document.getElementById('input3').value = '';
-      document.getElementById('input4').value = ''; // Reset the new input
-
-      // Reset the output box and hide it
-      document.getElementById('output').innerHTML = '';
-      document.getElementById('outputHeading').style.display = 'none';
-
-      // Hide the copy button
-      document.getElementById('copyButton').style.display = 'none';
-
-      // Clear the global variable
+      inputs.forEach(input => input.value = '');
+      outputDiv.innerHTML = '';
+      outputHeading.style.display = 'none';
+      copyButton.style.display = 'none';
+      copyMsg.style.display = 'none';
       window.shuffledTickets = '';
     });
   </script>
