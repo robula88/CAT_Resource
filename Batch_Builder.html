@@ -154,7 +154,8 @@
             });
 
             // Set the formatted output in the textarea
-            document.getElementById('batchOutput').textContent = output.trim();
+            // Use the value property so it can be copied correctly
+            document.getElementById('batchOutput').value = output.trim();
         }
 
         // Copy the batch output to the clipboard
